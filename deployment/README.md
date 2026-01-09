@@ -13,22 +13,21 @@ graph TD
     F -->|Crash?| G[Auto-Restart]
 ```
 
-## Option A: Docker (Recommended for Cloud)
-This method isolates the agent in a container.
+## Option A: Docker Compose (Recommended)
+This is the easiest way to run the agent in a production container.
 
-1.  **Build:**
+1.  **Start:**
     ```bash
-    docker build -t digital-fte -f deployment/Dockerfile .
+    docker-compose up -d
     ```
-2.  **Run (Background):**
+2.  **View Logs:**
     ```bash
-    docker run -d \
-      -v $(pwd)/Vault:/app/Vault \
-      -v $(pwd)/.env:/app/.env \
-      --name my-agent \
-      digital-fte
+    docker-compose logs -f
     ```
-    *Note: We mount the Vault volume so your files persist even if the container restarts.*
+3.  **Stop:**
+    ```bash
+    docker-compose down
+    ```
 
 ## Option B: PM2 (Recommended for Bare Metal/Linux)
 This method runs the agent as a background service on your OS.

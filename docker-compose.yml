@@ -1,0 +1,12 @@
+services:
+  digital-fte:
+    build: 
+      context: .
+      dockerfile: deployment/Dockerfile
+    container_name: digital-fte-agent
+    volumes:
+      - ./Vault:/app/Vault
+      - ./.env:/app/.env
+    restart: unless-stopped
+    environment:
+      - ENV_STATE=production
