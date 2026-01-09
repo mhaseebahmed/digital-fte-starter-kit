@@ -1,0 +1,15 @@
+# Core
+.venv/
+__pycache__/
+*.py[cod]
+.env
+
+# Vault & Data (Privacy)
+Vault/99_Logs/
+Vault/System/credentials.json
+Vault/System/token.json
+Vault/System/whatsapp_state.json
+
+# IDEs
+.vscode/
+.idea/
