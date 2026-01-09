@@ -4,8 +4,8 @@ import sys
 # Hack to import from src without installing package yet
 sys.path.append(str(Path(__file__).parent.parent))
 
-from src.foundation.config import settings
-from src.foundation.logger import setup_logger
+from shared_foundation.config import settings
+from shared_foundation.logger import setup_logger
 
 logger = setup_logger("setup")
 

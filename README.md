@@ -3,6 +3,31 @@
 
 This repository is the official companion to the [Digital FTE Architectural Specs](https://github.com/mhaseebahmed/Digital_FTE_Architectural_Specs). It provides a pre-configured, tested Python project structure designed for high-agency autonomous work.
 
+## 🧠 System Architecture
+
+```mermaid
+graph TD
+    subgraph "Perception Layer (Senses)"
+        A[File Watcher] -->|Detects| B(00_Inbox)
+        C[Gmail Sentinel] -->|Polls| B
+        D[WhatsApp Sentinel] -->|Scrapes| B
+    end
+
+    subgraph "Cognitive Layer (Brain)"
+        B -->|Trigger| E{Orchestrator}
+        E -->|Invoke| F[Claude Code CLI]
+        F -->|Read/Write| G[(Vault Memory)]
+        F -->|Plan| H(20_Plans)
+    end
+
+    subgraph "Action Layer (Hands)"
+        H -->|Propose| I{Approval Gate}
+        I -->|Human Sign-off| J(40_Approved)
+        J -->|Execute| K[MCP Tools]
+        K -->|API Call| L[External World]
+    end
+```
+
 ## 🚀 Key Features
 - **Modern Package Management:** Uses `uv` for lightning-fast, deterministic environment setup.
 - **Robust Watchers:** Event-driven file system monitoring with upload-stabilization loops.

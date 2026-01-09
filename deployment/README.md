@@ -1,6 +1,18 @@
 # Deployment Guide
 > **How to keep your Agent alive 24/7/365.**
 
+## 📦 Container Lifecycle
+
+```mermaid
+graph TD
+    A[Source Code] -->|Build| B(Docker Image)
+    B -->|Deploy| C{Cloud Host}
+    C -->|Mount Volume| D[(Persistent Vault)]
+    C -->|Run| E[Main Process]
+    E -->|Spawn| F[Watchers & Brain]
+    F -->|Crash?| G[Auto-Restart]
+```
+
 ## Option A: Docker (Recommended for Cloud)
 This method isolates the agent in a container.
 
