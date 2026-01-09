@@ -4,13 +4,16 @@ import logging
 import sys
 import schedule
 from watchdog.observers import Observer
-from .foundation.logger import setup_logger
-from .foundation.config import settings
-from .watchers.filesystem import RobustHandler
-from .watchers.approval import ApprovalHandler
-from .watchers.gmail import run_gmail_loop
-from .watchers.whatsapp import WhatsAppSentinel
-from .brains.auditor import AuditEngine
+
+# Updated Imports for Tiered Structure
+from shared_foundation.logger import setup_logger
+from shared_foundation.config import settings
+
+from tier_1_bronze.filesystem import RobustHandler
+from tier_2_silver.approval import ApprovalHandler
+from tier_2_silver.gmail import run_gmail_loop
+from tier_2_silver.whatsapp import WhatsAppSentinel
+from tier_3_gold.auditor import AuditEngine
 
 logger = setup_logger("orchestrator")
 
@@ -39,7 +42,6 @@ def run_approval_watcher():
     observer.join()
 
 def run_whatsapp_sentinel():
-    # Only run if session exists to avoid popping up windows in background
     sentinel = WhatsAppSentinel()
     if sentinel.state_path.exists():
         logger.info("📱 WhatsApp Sentinel starting...")

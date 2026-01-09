@@ -3,8 +3,8 @@ import logging
 from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Dict, Any
-from ..foundation.config import settings
-from ..foundation.logger import setup_logger
+from shared_foundation.config import settings
+from shared_foundation.logger import setup_logger
 
 logger = setup_logger("audit_engine")
 
@@ -13,9 +13,6 @@ class AuditEngine:
         self.log_dir = settings.VAULT_PATH / "99_Logs" / "System"
 
     def run_weekly_audit(self) -> str:
-        """
-        Analyzes logs from the last 7 days and returns a Markdown report.
-        """
         if not self.log_dir.exists():
             return "No logs found to audit."
 
@@ -28,27 +25,16 @@ class AuditEngine:
         
         cutoff = datetime.now() - timedelta(days=7)
         
-        # Iterate over all log files (Rotation support)
         for log_file in self.log_dir.glob("*.json"):
             try:
-                # We read line by line because JSON logs are usually JSONL (Newline Delimited)
-                # OR standard JSON. Our Logger produces JSONL.
                 with open(log_file, 'r', encoding='utf-8') as f:
                     for line in f:
                         if not line.strip(): continue
-                        
                         try:
                             record = json.loads(line)
                         except json.JSONDecodeError:
                             continue
 
-                        # Check Date
-                        ts_str = record.get('timestamp')
-                        # Simple check: If the timestamp string contains the year/month
-                        # Parsing every date string is slow, so we trust the file modification time mostly
-                        # But for precision, we parse:
-                        # 2026-10-12 08:00...
-                        
                         stats["total_events"] += 1
                         level = record.get('levelname', 'INFO')
                         

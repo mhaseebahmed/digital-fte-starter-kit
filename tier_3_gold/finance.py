@@ -3,8 +3,8 @@ import logging
 from pathlib import Path
 from dataclasses import dataclass
 from typing import List, Dict
-from ..foundation.logger import setup_logger
-from ..brains.claude_client import ClaudeClient
+from shared_foundation.logger import setup_logger
+from tier_1_bronze.claude_client import ClaudeClient
 
 logger = setup_logger("finance_engine")
 
@@ -18,7 +18,6 @@ class Transaction:
 class FinancialEngine:
     def __init__(self):
         self.brain = ClaudeClient()
-        # Hardcoded rules save API costs and increase speed
         self.rules = {
             "uber": "Travel",
             "lyft": "Travel",
@@ -30,64 +29,45 @@ class FinancialEngine:
         }
 
     def process_csv(self, file_path: Path) -> List[Transaction]:
-        """
-        Reads a bank CSV and categorizes transactions.
-        """
         transactions = []
-        
         try:
             with open(file_path, 'r', encoding='utf-8-sig') as f:
                 reader = csv.DictReader(f)
                 for row in reader:
-                    # Normalize Headers (Bank CSVs vary wildy)
                     desc = row.get('Description') or row.get('Memo') or row.get('Payee')
                     amt = row.get('Amount') or row.get('Debit') or row.get('Value')
                     date = row.get('Date') or row.get('Posting Date')
                     
-                    if not desc or not amt:
-                        continue
+                    if not desc or not amt: continue
 
                     t = Transaction(
                         date=date,
                         description=desc,
                         amount=float(amt.replace('$', '').replace(',', ''))
                     )
-                    
                     self._categorize(t)
                     transactions.append(t)
-                    
         except Exception as e:
             logger.error(f"Failed to process CSV {file_path}: {e}")
             return []
-
         return transactions
 
     def _categorize(self, transaction: Transaction):
-        # 1. Rule-Based (Fast)
         desc_lower = transaction.description.lower()
         for keyword, category in self.rules.items():
             if keyword in desc_lower:
                 transaction.category = category
                 logger.info(f"⚡ Auto-Categorized '{transaction.description}' as {category}")
                 return
-
-        # 2. LLM-Based (Slow/Smart)
-        # We only ask the Brain if we are unsure.
-        prompt = (
-            f"Categorize this bank transaction: '{transaction.description}' ($ {transaction.amount}). "
-            "Return ONLY the category name (e.g., 'Office Supplies', 'Payroll'). No other text."
-        )
-        # Note: In a real system, we would parse Claude's response. 
-        # For this Starter Kit, we will default to 'Needs Review' to be safe.
+        
+        prompt = f"Categorize this bank transaction: '{transaction.description}' ($ {transaction.amount}). Return ONLY the category name."
         transaction.category = "Needs Review" 
         logger.info(f"⚠️ Flagged for Review: {transaction.description}")
 
     def generate_report(self, transactions: List[Transaction]) -> str:
-        """Generates a P&L Summary in Markdown."""
         total_spend = sum(t.amount for t in transactions if t.amount < 0)
         total_income = sum(t.amount for t in transactions if t.amount > 0)
         
-        # Group by Category
         categories: Dict[str, float] = {}
         for t in transactions:
             categories[t.category] = categories.get(t.category, 0) + t.amount
@@ -104,5 +84,4 @@ class FinancialEngine:
 """
         for cat, amount in categories.items():
             report += f"- **{cat}:** ${amount:,.2f}\n"
-            
         return report
