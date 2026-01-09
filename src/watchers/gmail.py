@@ -59,35 +59,41 @@ class GmailSentinel:
         """
         if not self.service: return
 
-        # Query
-        results = self.service.users().messages().list(
-            userId='me', q="is:unread label:INBOX"
-        ).execute()
-        
-        messages = results.get('messages', [])
-        
-        if not messages:
-            return
+        try:
+            # Query
+            results = self.service.users().messages().list(
+                userId='me', q="is:unread label:INBOX"
+            ).execute()
+            
+            messages = results.get('messages', [])
+            
+            if not messages:
+                return
 
-        logger.info(f"📧 Found {len(messages)} unread emails.")
-        
-        for msg in messages:
-            self.process_message(msg['id'])
+            logger.info(f"📧 Found {len(messages)} unread emails.")
+            
+            for msg in messages:
+                self.process_message(msg['id'])
+                    
+        except Exception as e:
+            logger.error(f"❌ Gmail API Error: {e}")
+            raise e # Retry decorator handles this
 
     def process_message(self, msg_id):
-        # Fetch full details
-        msg = self.service.users().messages().get(userId='me', id=msg_id).execute()
-        
-        # Extract headers
-        payload = msg['payload']
-        headers = {h['name']: h['value'] for h in payload['headers']}
-        
-        subject = headers.get('Subject', '(No Subject)')
-        sender = headers.get('From', 'Unknown')
-        snippet = msg.get('snippet', '')
+        try:
+            # Fetch full details
+            msg = self.service.users().messages().get(userId='me', id=msg_id).execute()
+            
+            # Extract headers
+            payload = msg['payload']
+            headers = {h['name']: h['value'] for h in payload.get('headers', [])}
+            
+            subject = headers.get('Subject', '(No Subject)')
+            sender = headers.get('From', 'Unknown')
+            snippet = msg.get('snippet', '')
 
-        # Normalize to Markdown
-        content = f"""# 📧 New Email Detected
+            # Normalize to Markdown
+            content = f"""# 📧 New Email Detected
 **From:** {sender}
 **Subject:** {subject}
 **Date:** {headers.get('Date')}
@@ -98,17 +104,21 @@ class GmailSentinel:
 ## Instructions
 @Claude: Analyze this email. If it requires a reply, draft one in /20_Plans.
 """
-        # Save to Inbox (Triggers File Watcher)
-        filename = f"EMAIL_{msg_id}.md"
-        path = settings.get_inbox_path() / filename
-        path.write_text(content, encoding='utf-8')
-        
-        # Mark as Read (So we don't process it forever)
-        self.service.users().messages().modify(
-            userId='me', id=msg_id, body={'removeLabelIds': ['UNREAD']}
-        ).execute()
-        
-        logger.info(f"📥 Ingested: {filename}")
+            # Save to Inbox (Triggers File Watcher)
+            filename = f"EMAIL_{msg_id}.md"
+            path = settings.get_inbox_path() / filename
+            path.write_text(content, encoding='utf-8')
+            
+            # Mark as Read (So we don't process it forever)
+            self.service.users().messages().modify(
+                userId='me', id=msg_id, body={'removeLabelIds': ['UNREAD']}
+            ).execute()
+            
+            logger.info(f"📥 Ingested: {filename}")
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to process message {msg_id}: {e}")
+            # Do NOT re-raise. We want to skip this bad message and continue.
 
 def run_gmail_loop():
     sentinel = GmailSentinel()

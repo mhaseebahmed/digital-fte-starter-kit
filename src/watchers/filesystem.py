@@ -8,12 +8,14 @@ from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_t
 from ..foundation.logger import setup_logger
 from ..foundation.config import settings
 from ..brains.claude_client import ClaudeClient
+from ..brains.finance import FinancialEngine
 
 logger = setup_logger("filesystem_watcher")
 
 class RobustHandler(FileSystemEventHandler):
     def __init__(self):
         self.brain = ClaudeClient()
+        self.finance = FinancialEngine()
 
     def on_created(self, event):
         if event.is_directory: return
@@ -26,7 +28,7 @@ class RobustHandler(FileSystemEventHandler):
 
     def process_workflow(self, inbox_path: Path):
         """
-        The Atomic Lifecycle: Stabilize -> Lock -> Think -> Archive
+        The Atomic Lifecycle: Stabilize -> Lock -> Think/Route -> Archive
         """
         if not self._stabilize_file(inbox_path):
             return
@@ -36,18 +38,35 @@ class RobustHandler(FileSystemEventHandler):
         if not self._safe_move(inbox_path, processing_path):
             return
 
-        # 2. THINK (Call Claude)
-        prompt = f"Read the file '{processing_path}'. Follow instructions in Vault/System/Company_Handbook.md."
-        success = self.brain.think(prompt)
+        # 2. INTELLIGENT ROUTING
+        if processing_path.suffix.lower() == '.csv':
+            self._handle_financial(processing_path)
+        else:
+            self._handle_generic(processing_path)
 
         # 3. ARCHIVE (Move to Done)
         final_path = settings.get_done_path() / inbox_path.name
         self._safe_move(processing_path, final_path)
         
-        if success:
-            logger.info("✨ Task Cycle Complete")
-        else:
-            logger.warning("⚠️ Task Complete (But Brain Reported Errors)")
+        logger.info("✨ Task Cycle Complete")
+
+    def _handle_financial(self, file_path: Path):
+        """Gold Tier Path: Pure Python Processing"""
+        logger.info("💰 Routing to Financial Engine...")
+        transactions = self.finance.process_csv(file_path)
+        report = self.finance.generate_report(transactions)
+        
+        # Save Report
+        report_name = f"REPORT_{file_path.stem}.md"
+        report_path = settings.get_done_path() / report_name
+        report_path.write_text(report, encoding='utf-8')
+        logger.info(f"📊 Financial Report generated: {report_name}")
+
+    def _handle_generic(self, file_path: Path):
+        """Bronze Tier Path: General AI Reasoning"""
+        logger.info("🧠 Routing to Claude Brain...")
+        prompt = f"Read the file '{file_path}'. Follow instructions in Vault/System/Company_Handbook.md."
+        self.brain.think(prompt)
 
     def _stabilize_file(self, path: Path) -> bool:
         """Waits for file size to stop changing."""

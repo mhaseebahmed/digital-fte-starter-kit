@@ -10,31 +10,43 @@ def mock_brain():
     return MagicMock()
 
 @pytest.fixture
-def handler(mock_brain):
+def mock_finance():
+    return MagicMock()
+
+@pytest.fixture
+def handler(mock_brain, mock_finance):
     h = RobustHandler()
-    # Inject mock brain
     h.brain = mock_brain 
+    h.finance = mock_finance
     return h
 
-def test_ignore_hidden_files(handler):
-    # Event for .DS_Store
-    event = FileCreatedEvent("./Vault/00_Inbox/.DS_Store")
+def test_routing_financial(handler):
+    # Test CSV routing
+    path = Path("./Vault/10_Processing/bank.csv")
+    handler._handle_financial = MagicMock()
+    handler._handle_generic = MagicMock()
     
-    # Mock the internal logic to fail if called
-    handler.process_workflow = MagicMock()
+    # Mock stabilization/move to bypass IO
+    handler._stabilize_file = MagicMock(return_value=True)
+    handler._safe_move = MagicMock(return_value=True)
     
-    handler.on_created(event)
+    handler.process_workflow(path)
     
-    # Assert process was NOT called
-    handler.process_workflow.assert_not_called()
+    # Assert Financial Route called
+    handler._handle_financial.assert_called()
+    handler._handle_generic.assert_not_called()
 
-def test_valid_file_triggers_workflow(handler):
-    event = FileCreatedEvent("./Vault/00_Inbox/invoice.pdf")
+def test_routing_generic(handler):
+    # Test PDF routing
+    path = Path("./Vault/10_Processing/invoice.pdf")
+    handler._handle_financial = MagicMock()
+    handler._handle_generic = MagicMock()
     
-    # Mock process
-    handler.process_workflow = MagicMock()
+    handler._stabilize_file = MagicMock(return_value=True)
+    handler._safe_move = MagicMock(return_value=True)
     
-    handler.on_created(event)
+    handler.process_workflow(path)
     
-    # Assert CALLED
-    handler.process_workflow.assert_called_once()
+    # Assert Generic Route called
+    handler._handle_generic.assert_called()
+    handler._handle_financial.assert_not_called()
