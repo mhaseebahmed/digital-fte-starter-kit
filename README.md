@@ -47,18 +47,20 @@ uv run src/main.py
 
 ---
 
-## 🏗️ Project Structure
+## 🏗️ Project Structure (Tiered Monorepo)
+The codebase is organized into atomic tiers to separate concerns.
+
 ```text
 digital-fte-starter-kit/
-├── src/
-│   ├── foundation/       # Config, Logging, Errors (The Bedrock)
-│   ├── watchers/         # File, Gmail, WhatsApp (The Senses)
-│   ├── brains/           # Claude CLI Interface (The Brain)
-│   └── main.py           # The Entry Point
-├── scripts/              # Infrastructure setup tools
-├── tests/                # Automated Test Suite (Pytest)
-├── pyproject.toml        # Dependency Management (uv)
-└── .gitignore            # Multi-layer privacy filters
+├── shared_foundation/      # The Bedrock (Config, Logging, Exceptions)
+├── tier_1_bronze/          # Perception (File Watcher, Brain Interface)
+├── tier_2_silver/          # Communication (Gmail, WhatsApp, Approval)
+├── tier_3_gold/            # Strategy (Finance, Audit, Social Media)
+├── src/                    # The Entry Point (Orchestrator)
+├── scripts/                # Infrastructure setup tools
+├── tests/                  # Automated Test Suite (Pytest)
+├── pyproject.toml          # Dependency Management (uv)
+└── .gitignore              # Multi-layer privacy filters
 ```
 
 ## 🛡️ Privacy & Security
